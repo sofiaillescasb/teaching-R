@@ -104,11 +104,13 @@ all_casualties <- subset(data, Survived==0)
 
 data %>%
   ggplot(aes(x=x,fill=Sex)) +
-  geom_histogram(aes(x=Age,y = after_stat(count)), data=subset(data, Sex=="female")) +
-  geom_histogram(aes(x=Age,y = -after_stat(count)), data=subset(data, Sex=="male")) +
+  geom_histogram(aes(x=Age,y = after_stat(count)),col="black", data=subset(data, Sex=="female")) +
+  geom_histogram(aes(x=Age,y = -after_stat(count)),col="black", data=subset(data, Sex=="male")) +
   coord_flip() +
+  theme_minimal() +
   scale_y_continuous(
-    labels = abs) +
+    labels = abs
+    ) +
   labs(x = "Age", y = "Count", fill = "Age", title = "Age distribution by sex")
   
 
@@ -136,9 +138,6 @@ male_survivors %>%
 
 # For continuous variables raw
 variable_names <- "Age"
-
-
-
 
 # Create a list to store summary statistics
 summary_list <- list()
