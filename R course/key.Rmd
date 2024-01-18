@@ -15,7 +15,7 @@ https://posit.co/download/rstudio-desktop/
 
 # 1. Installing packages
 
-```{r}
+```{r install_packages, warning=FALSE, message=FALSE}
 if(!require(here)) install.packages("here")
 if(!require(qwraps2)) install.packages("qwraps2")
 if(!require(here)) install.packages("readxl")
@@ -25,7 +25,7 @@ if(!require(tidyverse)) install.packages("tidyverse")
 
 # 2. Importing libraries
 
-```{r library_imports}
+```{r library_imports, message=FALSE, warning=FALSE}
 library(here)
 library(qwraps2)
 library(readxl)
@@ -37,14 +37,108 @@ library(tidyverse)
 
 ```{r data_imports}
 dbset <- read_excel(here("dataset/titanic_dataset.xlsx"))
+#Inspecting data
+head(dbset)
+head(dbset[,"Name"])
+head(dbset[["Name"]])
+head(dbset$Name)
+
+#Subsetting
+dbset[dbset$Sex=="female"&dbset$Pclass==1,]
+subset(dbset, Sex=="female"&Pclass==1)
+
+#Change variable types if they don't make sense
+
+# "Age" should be a number, not characters
+dbset$Age <- as.numeric(dbset$Age)
+
+# "Survived" should be a factor meaning yes/no, instead of a numeric value
+dbset$Survived <- factor(dbset$Survived)
+
+# "Pclass" should also be a factor instead of a number
+dbset$Pclass <- factor(dbset$Pclass)
+
 ```
 
-# 4. Summarize and visualize data
+# 4. Summarizing and visualizing data
+
+```{r finding_interesting_groups}
+cat("Survival by sex:", sep = "\n")
+cat("", sep = "\n")
+xtabs(~Sex+Survived,data = dbset)
+cat("", sep = "\n")
+
+cat("Survival by class:", sep = "\n")
+cat("", sep = "\n")
+xtabs(~Pclass+Survived,data = dbset)
+cat("", sep = "\n")
+
+cat("Male survival by class:", sep = "\n")
+cat("", sep = "\n")
+xtabs(~Pclass+Survived,data = dbset,subset = Sex=="male")
+cat("", sep = "\n")
+
+cat("Female survival by class:", sep = "\n")
+cat("", sep = "\n")
+xtabs(~Pclass+Survived,data = dbset,subset = Sex=="female")
+cat("", sep = "\n")
+```
+
+```{r missing-values}
+# We can't use missing values, so we eliminate all columns with more than 80% NAs
+
+data <- dbset[,colSums(is.na(dbset)) < length(rownames(dbset))*0.2]
+
+colnames(data[,colSums(is.na(data)) > 0])
+
+# In this case we'll ignore missing values, but we could use more sophisticated methods to impute them
+data <- na.omit(data)
+```
+
+
+
+```{r visualization}
+
+all_survivors <- subset(data, Survived==1)
+all_casualties <- subset(data, Survived==0)
+
+data %>%
+  ggplot(aes(x=x,fill=Sex)) +
+  geom_histogram(aes(x=Age,y = after_stat(count)), data=subset(data, Sex=="female")) +
+  geom_histogram(aes(x=Age,y = -after_stat(count)), data=subset(data, Sex=="male")) +
+  coord_flip() +
+  scale_y_continuous(
+    labels = abs) +
+  labs(x = "Age", y = "Count", fill = "Age", title = "Age distribution by sex")
+  
+
+
+female_casualties <- subset(data, Sex=="female"&Survived==0)
+male_survivors <- subset(data, Sex=="male"&Survived==1)
+
+
+female_casualties %>%
+  ggplot(aes(x=Age,fill=Pclass)) +
+  geom_density(alpha=0.3) +
+  labs(title = "Female casualties distribution", x = "Age", y = "Count", fill = "Passenger class")
+
+
+male_survivors %>%
+  ggplot(aes(x=Age,fill=Pclass)) +
+  geom_density(alpha=0.3) +
+  labs(title = "Male survivors distribution", x = "Age", y = "Count", fill = "Passenger class")
+
+
+```
+
 
 ```{r summary_statistics}
+
 # For continuous variables raw
-variable_names <- colnames(dbset)[-c(1, 2)]
-data <- dbset
+variable_names <- "Age"
+
+
+
 
 # Create a list to store summary statistics
 summary_list <- list()
@@ -61,16 +155,16 @@ for (variable in variable_names) {
 }
 
 # Create a summary table
-summary_table_data <- summary_table(dplyr::group_by(data, Label), summary_list)
+summary_table_data <- summary_table(dplyr::group_by(data, Sex, Survived), summary_list)# Let's group passengers by survival, 0=died, 1=survived
 rownames_summary <- rownames(summary_table_data)
-summary_table_data <- data.frame(cbind(rep(variable_names, each = 5), summary_table_data), check.names = FALSE)
-colnames(summary_table_data)[1] <- "Metabolite"
+summary_table_data <- data.frame(cbind(rep(variable_names, each = 5), summary_table_data), check.names = FALSE) #change for the number of statistics to calculate
+colnames(summary_table_data)[1] <- "Variable" #Change to name that makes sense
 summary_table_data <- rownames_to_column(summary_table_data, var = "Statistic")
 summary_table_data$Statistic <- rownames_summary
 
 # Pivot the data for a wider format
-pivoted_data <- pivot_wider(summary_table_data, names_from = Metabolite, values_from = colnames(summary_table_data)[-c(1, 2)])
-
+summary_statistics_grouped <- pivot_wider(summary_table_data, names_from = Variable, values_from = colnames(summary_table_data)[-c(1, 2)]) 
+View(summary_statistics_grouped)
 ```
 
 # 5. 
