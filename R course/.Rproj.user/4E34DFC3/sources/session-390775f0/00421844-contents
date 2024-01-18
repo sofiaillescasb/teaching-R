@@ -1,0 +1,76 @@
+---
+title: "key"
+author: "Sofia Illescas"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+```
+
+# 0. Installing R and RStudio
+
+https://posit.co/download/rstudio-desktop/
+
+# 1. Installing packages
+
+```{r}
+if(!require(here)) install.packages("here")
+if(!require(qwraps2)) install.packages("qwraps2")
+if(!require(here)) install.packages("readxl")
+if(!require(qwraps2)) install.packages("writexl")
+if(!require(tidyverse)) install.packages("tidyverse")
+```
+
+# 2. Importing libraries
+
+```{r library_imports}
+library(here)
+library(qwraps2)
+library(readxl)
+library(writexl)
+library(tidyverse)
+```
+
+# 3. Importing data
+
+```{r data_imports}
+dbset <- read_excel(here("dataset/titanic_dataset.xlsx"))
+```
+
+# 4. Summarize and visualize data
+
+```{r summary_statistics}
+# For continuous variables raw
+variable_names <- colnames(dbset)[-c(1, 2)]
+data <- dbset
+
+# Create a list to store summary statistics
+summary_list <- list()
+
+# Iterate over the variable names to compute statistics
+for (variable in variable_names) {
+  summary_list[[variable]] <- list(
+    "min" = as.formula(paste0("~ min(`", variable, "`)")),
+    "median (iqr)" = as.formula(paste0("~ median_iqr(`", variable, "`)")),
+    "max" = as.formula(paste0("~ max(`", variable, "`)")),
+    "mean (CI)" = as.formula(paste0("~ qwraps2::frmtci(mean_ci(`", variable, "`, show_level = TRUE))")),
+    "SD" = as.formula(paste0("~ sd(`", variable, "`)"))
+  )
+}
+
+# Create a summary table
+summary_table_data <- summary_table(dplyr::group_by(data, Label), summary_list)
+rownames_summary <- rownames(summary_table_data)
+summary_table_data <- data.frame(cbind(rep(variable_names, each = 5), summary_table_data), check.names = FALSE)
+colnames(summary_table_data)[1] <- "Metabolite"
+summary_table_data <- rownames_to_column(summary_table_data, var = "Statistic")
+summary_table_data$Statistic <- rownames_summary
+
+# Pivot the data for a wider format
+pivoted_data <- pivot_wider(summary_table_data, names_from = Metabolite, values_from = colnames(summary_table_data)[-c(1, 2)])
+
+```
+
+# 5. 
