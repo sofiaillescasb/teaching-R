@@ -1,0 +1,42 @@
+---
+title: "Wanna try quarto"
+format: html
+editor: visual
+execute: 
+  echo: false
+---
+
+## Fine let's see
+
+```{python}
+#| label: fig-polar
+#| fig-cap: "A line plot on a polar axis"
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+r = np.arange(0, 2, 0.01)
+theta = 2 * np.pi * r
+fig, ax = plt.subplots(
+  subplot_kw = {'projection': 'polar'} 
+)
+ax.plot(theta, r)
+ax.set_rticks([0.5, 1, 1.5, 2])
+ax.grid(True)
+plt.show()
+
+```
+
+```{r warning=FALSE, message=FALSE}
+
+library(tidyverse)
+
+r <- seq(0,2,0.01)
+theta <- 2*pi*r
+
+ggplot() +
+  geom_path(aes(x=r, y=theta)) +
+  coord_polar()
+
+
+```
