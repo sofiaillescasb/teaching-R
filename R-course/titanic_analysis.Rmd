@@ -1,0 +1,65 @@
+---
+title: "Titanic Analysis"
+author: "Sofia Illescas"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# 1. Importing libraries
+
+```{r libraries, include=FALSE}
+library(here)
+library(readxl)
+library(tidyverse)
+```
+
+# 2. Importing data
+
+```{r data_imports}
+
+dbset <- read_excel(here("dataset/titanic_dataset.xlsx"))
+
+head(dbset)
+colnames(dbset)
+```
+
+# 3. Cleaning data
+
+```{r data_types_missing_values}
+
+dbset <- dbset %>%
+  mutate_at(c("PassengerId", "Survived", "Pclass", "Sex", "Embarked"), factor) %>%
+  mutate_at(c("Age","Fare"), as.numeric)
+
+keep_cols <- c()
+
+for (i in colnames(dbset)) {
+  if(sum(is.na(dbset[[i]])) <= 0.2*nrow(dbset)) {
+    keep_cols <- c(keep_cols,i)
+  } 
+  else next
+}
+
+
+keep_cols <- colnames(dbset)[sapply(colnames(dbset), function(x) sum(is.na(dbset[[x]])) <= 0.2*nrow(dbset))]
+
+sum(is.na(dbset[["Cabin"]]))
+0.2*nrow(dbset)
+
+dplyr_try <- dbset %>%
+  select_if(~ sum(is.na(.)) <= 0.2*nrow(dbset))
+
+dbset[,keep_cols] == dplyr_try
+
+dbset[apply(dbset, 2, function(x) sum(is.na(x))>0.2*nrow(dbset))]
+
+dbset_filtered <- dbset %>%
+  select_if(~ sum(is.na(.)) <= 0.2*nrow(dbset))
+
+dbset
+dbset[complete.cases(dbset),]
+```
