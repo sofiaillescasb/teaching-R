@@ -61,5 +61,21 @@ dbset_filtered <- dbset %>%
   select_if(~ sum(is.na(.)) <= 0.2*nrow(dbset))
 
 dbset
-dbset[complete.cases(dbset),]
+dbset_no_missing <- dbset_filtered[complete.cases(dbset_filtered),]
+```
+
+```{r}
+
+dbset_no_missing %>%
+  ggplot(aes(x=Age, fill=Sex, color=Sex)) +
+  geom_density(aes(y=after_stat(count)),alpha=0.6) +
+  facet_wrap(~ Pclass, scales = "free")
+
+dbset_no_missing %>%
+  ggplot(aes(x=Age, fill=Sex, color=Sex)) +
+  geom_bar(data=subset(dbset_no_missing,Sex=="male"),aes(Age),alpha=0.6, position = "identity") +
+  geom_bar(data=subset(dbset_no_missing,Sex=="female"),aes(Age),alpha=0.6, position = "identity") +
+  coord_flip() +
+  scale_y_continuous(breaks = seq(-20,20,5))
+
 ```
