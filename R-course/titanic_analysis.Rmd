@@ -1,0 +1,137 @@
+---
+title: "Titanic Analysis"
+author: "Sofia Illescas"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# 1. Importing libraries
+
+```{r libraries, include=FALSE}
+library(here)
+library(readxl)
+library(tidyverse)
+```
+
+# 2. Importing data
+
+```{r data_imports}
+
+dbset <- read_excel(here("dataset/titanic_dataset.xlsx"))
+
+head(dbset)
+colnames(dbset)
+```
+
+# 3. Cleaning data
+
+```{r data_types_missing_values}
+
+dbset <- dbset %>%
+  mutate_at(c("PassengerId", "Survived", "Pclass", "Sex", "Embarked","Ticket"), factor) %>%
+  mutate_at(c("Age","Fare"), as.numeric)
+
+keep_cols <- c()
+
+for (i in colnames(dbset)) {
+  if(sum(is.na(dbset[[i]])) <= 0.2*nrow(dbset)) {
+    keep_cols <- c(keep_cols,i)
+  } 
+  else next
+}
+
+
+keep_cols <- colnames(dbset)[sapply(colnames(dbset), function(x) sum(is.na(dbset[[x]])) <= 0.2*nrow(dbset))]
+
+sum(is.na(dbset[["Cabin"]]))
+0.2*nrow(dbset)
+
+dplyr_try <- dbset %>%
+  select_if(~ sum(is.na(.)) <= 0.2*nrow(dbset))
+
+
+dbset[apply(dbset, 2, function(x) sum(is.na(x))>0.2*nrow(dbset))]
+
+dbset_filtered <- dbset %>%
+  select_if(~ sum(is.na(.)) <= 0.2*nrow(dbset))
+
+dbset
+dbset_no_missing <- dbset_filtered[complete.cases(dbset_filtered),]
+```
+
+```{r}
+
+dbset_no_missing %>%
+  ggplot(aes(x=Age, fill=Sex, color=Sex)) +
+  geom_density(aes(y=after_stat(count)),alpha=0.6) +
+  facet_wrap(~ Pclass, scales = "free")
+
+age_ranges <- pretty(dbset_no_missing$Age, n=20)
+
+
+dbset_age_split <- dbset_no_missing %>%
+  mutate(Age.Range = cut(Age, age_ranges, include.lowest = FALSE))
+
+
+dbset_age_split %>%
+  group_by(Sex, Age.Range) %>% 
+  reframe(Passengers = n()) %>%
+  mutate(Passengers=if_else(Sex=="female",-Passengers,Passengers)) %>%
+  ggplot(aes(x = Age.Range,
+         y = Passengers,
+         fill = Sex)) + 
+  coord_flip() +
+geom_bar(stat = "identity") +
+   scale_y_continuous(
+     breaks = seq(-100,100,10),
+     limits = c(-100,100),
+     labels = abs(seq(-100,100,10))) 
+
+
+
+library(apyramid)
+
+dbset_age_split$Age.Range <- as.factor(dbset_age_split$Age.Range)
+
+age_pyramid(dbset_age_split, age_group = "Age.Range", split_by = "Sex", proportional = FALSE, stack_by = "Pclass")
+```
+
+```{r}
+dbset_no_missing %>%
+  ggplot(aes(x=Age, fill=Pclass, color=Pclass)) +
+  geom_density(aes(y=after_stat(count)),alpha=0.6) 
+
+table(dbset_no_missing$Pclass)/nrow(dbset_no_missing)*100
+
+dbset_no_missing %>%
+  ggplot(aes(Survived, fill=Pclass, color=Pclass)) +
+  geom_bar(alpha=0.6, position = "fill") 
+
+dbset_no_missing %>%
+  ggplot(aes(Pclass, fill=Survived, color=Survived)) +
+  geom_bar(alpha=0.6, position = "fill") 
+
+dbset_no_missing %>%
+  ggplot(aes(Sex, fill=Survived, color=Survived)) +
+  geom_bar(alpha=0.6, position = "fill") 
+
+dbset_no_missing_p_ticket <- dbset_no_missing %>%
+  group_by(Ticket) %>%
+  mutate(Per_ticket=n()) %>%
+  mutate(Fare=Fare/Per_ticket) %>%
+  ungroup()
+
+```
+
+```{r anova}
+
+fare_anova <- aov(Fare ~ Pclass, dbset_no_missing_p_ticket)
+coefs_fare <- coefficients(fare_anova)
+tukey_fare <- TukeyHSD(fare_anova)
+TukeyHSD(fare_anova)
+
+```

@@ -1,0 +1,96 @@
+---
+title: "Instalar paquetes"
+author: "Sofia Illescas"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: flatly
+    toc: yes
+    collapsed: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(eval=FALSE)
+```
+
+# De dónde instalar
+
+## Comprehensive R Archive Network (CRAN)
+
+Es el repositorio central de R que contiene la mayoría de paquetes.
+
+Se pueden descargar como archivos binarios para Mac/Windows o como source code. Lo mejor es usar el binario, porque tarda menos.
+
+```{r cran}
+install.packages("stringi")
+
+# En Windows y Mac se instala automaticamente del binario si existe
+install.packages("stringi",type = "binary") 
+
+# Se puede especificar usar el source pero puede que requiera otros paquetes para que funcione
+install.packages("stringi",type = "source")
+
+```
+
+## Bioconductor
+
+Tiene paquetes de bioinformática
+
+```{r bioconductor}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("limma")
+```
+
+## GitHub
+
+```{r github}
+
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+install.packages("remotes")
+
+```
+
+# Resolver problemas
+
+Casi todo se puede resolver con buscar el error en <https://stackoverflow.com/> e intentar las sugerencias hasta que algo funcione, pero lo funcionó con `stringi` fue:
+
+-   Actualizar R si la versión no es la más nueva
+
+-   Descargar directamente el archivo binario de su fuente (en este caso estaba en CRAN)
+
+<center>![](tutorials/images/image_1.png){width="545"}</center>
+
+-   Si usas MacOS:
+
+    Hay que fijarse en el tipo de archivo binario. Aunque pueden ser iguales para todos los equipos, si hay duda mira en la *manzana de la esquina superior izquierda \>* *About this Mac \> Processor:*
+
+    -   Si dice Apple silicon (ARM, M1 or M2) usa el ***arm64***
+
+    -   Si dice Intel usa ***x86/Intel***
+
+    -   Más información aquí: <https://cran.r-project.org/bin/macosx/>
+
+Ya que descargaste el archivo, vas a Rstudio y le das:
+
+*Tools \> Install packages*
+
+Selecciona Package Archive File (.zip; .tar.gz) y selecciona el pathway del binario que descargaste. Esto le dice a R lo mismo que:
+
+`install.packages("PATHWAY DEL PAQUETE", repos = NULL)` ,
+
+donde "PATHWAY DEL PAQUETE" es el pathway del binario que descargaste.
+
+<center>![](tutorials/images/image_2.png)</center>
+
+-   Si al hacerlo de la forma anterior sale un error que dice `type =="both" cannot be used with 'repos =NULL'` hay que usar `install.packages("PATHWAY DEL PAQUETE", repos = NULL, type="binary").`
+
+    -   El pathway se ve asi: "C:\\Users\\killescas\\Downloads\\tidyverse_2.0.0.zip" y se encuentra al dar *click derecho al archivo \> Copy as path* o *Copy as pathname*:
+
+<center>![](tutorials/images/image_3.png){width="74%"}</center>
+
+-   IMPORTANTE: En Windows los pathways están escritos con \\\\, en R es necesario cambiarlos por /

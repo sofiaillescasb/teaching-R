@@ -35,6 +35,8 @@ library(tidyverse)
 
 # 3. Importing data
 
+https://github.com/sofiaillescasb/teaching-R/blob/main/R%20course/dataset/titanic_dataset.xlsx
+
 ```{r data_imports}
 dbset <- read_excel(here("dataset/titanic_dataset.xlsx"))
 #Inspecting data
@@ -46,6 +48,7 @@ head(dbset$Name)
 #Subsetting
 dbset[dbset$Sex=="female"&dbset$Pclass==1,]
 subset(dbset, Sex=="female"&Pclass==1)
+dbset %>% filter(Sex=="female"&Pclass==1) 
 
 #Change variable types if they don't make sense
 
