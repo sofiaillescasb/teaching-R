@@ -65,7 +65,8 @@ dbset <- dbset %>%
 dbset_filtered <- dbset %>%
   select_if(~ sum(is.na(.)) <= 0.2*nrow(dbset))
 
-dbset
+dbset_no_missing <- dbset %>%
+  drop_na()
 dbset_no_missing <- dbset_filtered[complete.cases(dbset_filtered),]
 ```
 
