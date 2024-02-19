@@ -24,8 +24,17 @@ library(tidyverse)
 
 dbset <- read_excel(here("dataset/titanic_dataset.xlsx"))
 
+# Y si tuvieramos más de un hoja de Excel?
+# path <- here("dataset/titanic_dataset.xlsx")
+# dbset_list <- lapply(excel_sheets(path), read_excel, path = path)
+
+# Vamos a revisar los datos
+# Las columnas deben ser las variables dependientes y las filas deben ser observaciones
 head(dbset)
+
+
 colnames(dbset)
+rownames(dbset)
 ```
 
 # 3. Cleaning data
@@ -36,26 +45,22 @@ dbset <- dbset %>%
   mutate_at(c("PassengerId", "Survived", "Pclass", "Sex", "Embarked","Ticket"), factor) %>%
   mutate_at(c("Age","Fare"), as.numeric)
 
-keep_cols <- c()
-
-for (i in colnames(dbset)) {
-  if(sum(is.na(dbset[[i]])) <= 0.2*nrow(dbset)) {
-    keep_cols <- c(keep_cols,i)
-  } 
-  else next
-}
-
-
-keep_cols <- colnames(dbset)[sapply(colnames(dbset), function(x) sum(is.na(dbset[[x]])) <= 0.2*nrow(dbset))]
-
-sum(is.na(dbset[["Cabin"]]))
-0.2*nrow(dbset)
-
-dplyr_try <- dbset %>%
-  select_if(~ sum(is.na(.)) <= 0.2*nrow(dbset))
+# keep_cols <- c()
+# 
+# for (i in colnames(dbset)) {
+#   if(sum(is.na(dbset[[i]])) <= 0.2*nrow(dbset)) {
+#     keep_cols <- c(keep_cols,i)
+#   } 
+#   else next
+# }
+# 
+# 
+# keep_cols <- colnames(dbset)[sapply(colnames(dbset), function(x) sum(is.na(dbset[[x]])) <= 0.2*nrow(dbset))]
+# 
+# sum(is.na(dbset[["Cabin"]]))
+# 0.2*nrow(dbset)
 
 
-dbset[apply(dbset, 2, function(x) sum(is.na(x))>0.2*nrow(dbset))]
 
 dbset_filtered <- dbset %>%
   select_if(~ sum(is.na(.)) <= 0.2*nrow(dbset))
@@ -66,7 +71,7 @@ dbset_no_missing <- dbset_filtered[complete.cases(dbset_filtered),]
 
 ```{r}
 
-dbset_no_missing %>%
+p1 <- dbset_no_missing %>%
   ggplot(aes(x=Age, fill=Sex, color=Sex)) +
   geom_density(aes(y=after_stat(count)),alpha=0.6) +
   facet_wrap(~ Pclass, scales = "free")
@@ -78,7 +83,7 @@ dbset_age_split <- dbset_no_missing %>%
   mutate(Age.Range = cut(Age, age_ranges, include.lowest = FALSE))
 
 
-dbset_age_split %>%
+p2 <- dbset_age_split %>%
   group_by(Sex, Age.Range) %>% 
   reframe(Passengers = n()) %>%
   mutate(Passengers=if_else(Sex=="female",-Passengers,Passengers)) %>%
@@ -92,13 +97,20 @@ geom_bar(stat = "identity") +
      limits = c(-100,100),
      labels = abs(seq(-100,100,10))) 
 
+p1 + p2
 
+p1 / p2 & plot_annotation(tag_level = "A")
 
-library(apyramid)
+p1 / p2 & plot_annotation(tag_level = "a")
 
-dbset_age_split$Age.Range <- as.factor(dbset_age_split$Age.Range)
+p1 / p2 & plot_annotation(tag_level = "I")
 
-age_pyramid(dbset_age_split, age_group = "Age.Range", split_by = "Sex", proportional = FALSE, stack_by = "Pclass")
+p1 / p2 & plot_annotation(tag_level = "A") & plot_layout(heights = c(1,2))
+# library(apyramid)
+# 
+# dbset_age_split$Age.Range <- as.factor(dbset_age_split$Age.Range)
+# 
+# age_pyramid(dbset_age_split, age_group = "Age.Range", split_by = "Sex", proportional = FALSE, stack_by = "Pclass")
 ```
 
 ```{r}
