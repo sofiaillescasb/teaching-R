@@ -11,7 +11,9 @@ knitr::opts_chunk$set(echo = FALSE)
 
 # 1. Importing libraries
 
-```{r libraries, include=FALSE}
+Cuando estas haciendo un reporte para tu analisis de datos, se puede poner include=FALSE para que no salga anda en el documento. Me estoy dando cuenta de que si estamos usando esto como cuaderno de notas podriamos usar echo=TRUE con warning=FALSE y message=FALSE
+
+```{r libraries, echo=TRUE, warning=FALSE, message=FALSE}
 library(here)
 library(readxl)
 library(patchwork)
@@ -34,40 +36,139 @@ head(dbset)
 
 
 colnames(dbset)
-rownames(dbset)
+
 ```
 
 # 3. Cleaning data
 
-```{r data_types_missing_values}
+Funciones de tidyverse (el paquete concreto es **dplyr**)
 
-dbset <- dbset %>%
-  mutate_at(c("PassengerId", "Survived", "Pclass", "Sex", "Embarked","Ticket"), factor) %>%
-  mutate_at(c("Age","Fare"), as.numeric)
+```{r dplyr_examples}
 
-# keep_cols <- c()
-# 
-# for (i in colnames(dbset)) {
-#   if(sum(is.na(dbset[[i]])) <= 0.2*nrow(dbset)) {
-#     keep_cols <- c(keep_cols,i)
-#   } 
-#   else next
+# select se usa para seleccionar columnas por nombre
+# : se usa para seleccionar un rango de columnas, 
+dbset %>%
+  select("PassengerId":"Pclass")
+
+dbset %>%
+  filter(Sex=="female")
+
+dbset %>%
+  mutate("Pclass")
+
+
+# dbset_no_missing_p_ticket %>%
+#     dplyr::group_by(Pclass,Sex) %>%
+#     reframe(Mean= mean(Fare),
+#             Median= median(Fare))
+
+# summ_stat <- function(df) {
+#   df %>%
+#     group_by(Sex) %>%
+#     select(where(is.numeric)) %>%
+#     summarise(across(everything(),
+#                      Mean= ~ mean(.x),
+#                      Median= ~ median(.x),
+#                      CI= ~ confint(.x)))
 # }
 # 
-# 
-# keep_cols <- colnames(dbset)[sapply(colnames(dbset), function(x) sum(is.na(dbset[[x]])) <= 0.2*nrow(dbset))]
-# 
-# sum(is.na(dbset[["Cabin"]]))
-# 0.2*nrow(dbset)
+# summ_stat(dbset)
 
+```
 
+```{r data_types}
 
-dbset_filtered <- dbset %>%
-  select_if(~ sum(is.na(.)) <= 0.2*nrow(dbset))
+dbset <- dbset %>%
+  mutate(across(c("PassengerId", "Survived", "Pclass", "Sex", "Embarked","Ticket"), as.factor)) %>%
+  mutate(across(c("Age","Fare"), as.numeric))
+
+```
+
+```{r missing_values}
 
 dbset_no_missing <- dbset %>%
+  select(where(~mean(is.na(.x)) < 0.2))
+
+dbset_no_missing <- dbset_no_missing %>%
   drop_na()
-dbset_no_missing <- dbset_filtered[complete.cases(dbset_filtered),]
+```
+
+```{r mean_comparison}
+
+dbset_no_missing_p_ticket <- dbset_no_missing %>%
+  group_by(Ticket) %>%
+  mutate(Fare=mean(Fare)/n()) %>%
+  ungroup()
+
+  
+dbset_no_missing_p_ticket %>%
+  group_by(Pclass) %>%
+  reframe(Mean= mean(Fare),
+          Median= median(Fare)) %>%
+  ungroup()
+
+dbset_no_missing_p_ticket %>%
+  group_by(Pclass,Survived) %>%
+  reframe(Mean= mean(Fare),
+          Median= median(Fare)) %>%
+  ungroup()
+
+
+fare_anova <- aov(Fare ~ Pclass + Survived, dbset_no_missing_p_ticket)
+tukey_fare <- TukeyHSD(fare_anova)
+tukey_fare
+
+fare_anova <- aov(Fare ~ Pclass + Sex + Age + Survived, dbset_no_missing_p_ticket)
+fare_anova <- aov(Fare ~ Pclass + Sex * Age + Survived, dbset_no_missing_p_ticket)
+summary(fare_anova)
+coefs_fare <- coefficients(fare_anova)
+
+```
+
+```{r}
+
+dbset_no_missing_p_ticket %>%
+  t.test(Fare ~ Survived, data=.)
+
+dbset_no_missing_p_ticket %>%
+  t.test(Age ~ Survived, data=.)
+
+dbset_no_missing_p_ticket %>%
+  glm(Survived ~ Pclass, family = "binomial", data=.)
+
+dbset_no_missing_p_ticket %>%
+  glm(Survived ~ Sex, family = "binomial", data=.)
+
+dbset_no_missing_p_ticket %>%
+  glm(Survived ~ Age, family = "binomial", data=.)
+
+dbset_no_missing_p_ticket %>%
+  glm(Survived ~ Pclass + Age, family = "binomial", data=.)
+
+dbset_no_missing_p_ticket %>%
+  glm(Survived ~ Age*Sex, family = "binomial", data=.)
+
+model6 <- dbset_no_missing_p_ticket %>%
+  glm(Survived ~ Age*Sex + Pclass, family = "binomial", data=.)
+
+summary(model6)
+plot(model6)
+
+model6$linear.predictors
+
+dbset_no_missing_p_ticket %>%
+  ggplot(aes(Age, Survived)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(method = "glm", 
+              method.args = list(family = "binomial"),
+              formula = Survived ~ Fare) +
+  labs(
+    title = "Logistic Regression Model", 
+    x = "Fare",
+    y = "Survived"
+    )
+
+
 ```
 
 ```{r}
@@ -140,14 +241,5 @@ dbset_no_missing_p_ticket <- dbset_no_missing %>%
   mutate(Per_ticket=n()) %>%
   mutate(Fare=Fare/Per_ticket) %>%
   ungroup()
-
-```
-
-```{r anova}
-
-fare_anova <- aov(Fare ~ Pclass, dbset_no_missing_p_ticket)
-coefs_fare <- coefficients(fare_anova)
-tukey_fare <- TukeyHSD(fare_anova)
-TukeyHSD(fare_anova)
 
 ```
