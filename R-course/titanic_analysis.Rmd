@@ -106,6 +106,8 @@ p1 / p2 & plot_annotation(tag_level = "a")
 p1 / p2 & plot_annotation(tag_level = "I")
 
 p1 / p2 & plot_annotation(tag_level = "A") & plot_layout(heights = c(1,2))
+
+
 # library(apyramid)
 # 
 # dbset_age_split$Age.Range <- as.factor(dbset_age_split$Age.Range)
