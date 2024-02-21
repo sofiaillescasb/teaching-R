@@ -17,6 +17,7 @@ Cuando estas haciendo un reporte para tu analisis de datos, se puede poner inclu
 library(here)
 library(readxl)
 library(patchwork)
+library(caret)
 library(tidyverse)
 ```
 
@@ -48,19 +49,20 @@ Funciones de tidyverse (el paquete concreto es **dplyr**)
 # select se usa para seleccionar columnas por nombre
 # : se usa para seleccionar un rango de columnas, 
 dbset %>%
-  select("PassengerId":"Pclass")
+  select(PassengerId:Pclass)
 
 dbset %>%
   filter(Sex=="female")
 
 dbset %>%
-  mutate("Pclass")
+  mutate(Pclass=as.factor(paste0("Class_",Pclass)))
 
+# reframe() y summarise()
+dbset %>%
+    dplyr::group_by(Pclass,Sex) %>%
+    reframe(Mean= mean(Fare),
+            Median= median(Fare))
 
-# dbset_no_missing_p_ticket %>%
-#     dplyr::group_by(Pclass,Sex) %>%
-#     reframe(Mean= mean(Fare),
-#             Median= median(Fare))
 
 # summ_stat <- function(df) {
 #   df %>%
@@ -69,7 +71,7 @@ dbset %>%
 #     summarise(across(everything(),
 #                      Mean= ~ mean(.x),
 #                      Median= ~ median(.x),
-#                      CI= ~ confint(.x)))
+#                      CI= ~ confint(.x)))#incorrect function
 # }
 # 
 # summ_stat(dbset)
@@ -79,84 +81,220 @@ dbset %>%
 ```{r data_types}
 
 dbset <- dbset %>%
-  mutate(across(c("PassengerId", "Survived", "Pclass", "Sex", "Embarked","Ticket"), as.factor)) %>%
-  mutate(across(c("Age","Fare"), as.numeric))
+  mutate(across(c(Survived, Pclass, Sex, Embarked, Ticket), as.factor)) %>%
+  mutate(across(c(Age,Fare), as.numeric)) %>%
+  mutate(PassengerId=as.character(PassengerId))
 
 ```
+
+We'll entirely remove columns with too many missing values to give any information (over 80% missing values)
 
 ```{r missing_values}
 
-dbset_no_missing <- dbset %>%
+dbset_filtered <- dbset %>%
   select(where(~mean(is.na(.x)) < 0.2))
 
-dbset_no_missing <- dbset_no_missing %>%
-  drop_na()
+# dbset_filtered %>%
+#   mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)"))
+# 
+# dbset_filtered %>%
+#   mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)")) %>%
+#   group_by(Title) %>%
+#   reframe(Count=n(),Mean_age=round(mean(Age, na.rm = TRUE)))
+
+
 ```
 
-```{r mean_comparison}
+Let's make better predictors by aggregating siblings, children, parents, and spouses into a single family unit and dividing ticket fare by the number of people on each ticket
 
-dbset_no_missing_p_ticket <- dbset_no_missing %>%
+```{r aggregate_variables}
+
+dbset_filtered_p_ticket <- dbset_filtered %>%
   group_by(Ticket) %>%
-  mutate(Fare=mean(Fare)/n()) %>%
+  mutate(Fare= mean(Fare)/n()) %>%
   ungroup()
 
-  
-dbset_no_missing_p_ticket %>%
+dbset_p_ticket_family <- dbset_filtered_p_ticket %>%
+  mutate(Family= SibSp + Parch) %>%
+  select(-c(SibSp,Parch))
+
+```
+
+Showing how to calculate summary stats
+
+```{r summary_stats}
+
+dbset_p_ticket_family %>%
   group_by(Pclass) %>%
   reframe(Mean= mean(Fare),
           Median= median(Fare)) %>%
   ungroup()
 
-dbset_no_missing_p_ticket %>%
+dbset_p_ticket_family %>%
   group_by(Pclass,Survived) %>%
   reframe(Mean= mean(Fare),
           Median= median(Fare)) %>%
   ungroup()
+```
 
+Making Q-Q plots
 
-fare_anova <- aov(Fare ~ Pclass + Survived, dbset_no_missing_p_ticket)
-tukey_fare <- TukeyHSD(fare_anova)
-tukey_fare
-
-fare_anova <- aov(Fare ~ Pclass + Sex + Age + Survived, dbset_no_missing_p_ticket)
-fare_anova <- aov(Fare ~ Pclass + Sex * Age + Survived, dbset_no_missing_p_ticket)
-summary(fare_anova)
-coefs_fare <- coefficients(fare_anova)
+```{r check_distribution}
 
 ```
 
-```{r}
+I'm gonna put some common tests here, but I definitely calculate proportions instead
 
-dbset_no_missing_p_ticket %>%
+```{r mean_comparison_examples}
+
+dbset_for_tests <- dbset_p_ticket_family %>%
+  mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)")) %>%
+  group_by(Title) %>%
+  mutate(Mean_age=round(mean(Age, na.rm = TRUE))) %>%
+  mutate(Age=ifelse(is.na(Age),Mean_age,Age))
+
+
+fare_anova <- aov(Fare ~ Pclass + Survived, dbset_for_tests)
+tukey_fare <- TukeyHSD(fare_anova)
+tukey_fare
+
+fare_anova <- aov(Fare ~ Pclass + Sex + Age + Survived, dbset_for_tests)
+fare_anova <- aov(Fare ~ Pclass + Sex * Age + Survived, dbset_for_tests)
+summary(fare_anova)
+coefs_fare <- coefficients(fare_anova)
+
+
+dbset_for_tests %>%
   t.test(Fare ~ Survived, data=.)
 
-dbset_no_missing_p_ticket %>%
+dbset_for_tests %>%
   t.test(Age ~ Survived, data=.)
 
-dbset_no_missing_p_ticket %>%
-  glm(Survived ~ Pclass, family = "binomial", data=.)
+#HMMMMMMMMM I need to look into the use of chi square tests in this case, also apparently you use it for model selection?
 
-dbset_no_missing_p_ticket %>%
-  glm(Survived ~ Sex, family = "binomial", data=.)
+chisq.test(dbset_for_tests$Sex, dbset_for_tests$Survived)
 
-dbset_no_missing_p_ticket %>%
-  glm(Survived ~ Age, family = "binomial", data=.)
+chisq.test(dbset_for_tests$Pclass, dbset_for_tests$Survived)
 
-dbset_no_missing_p_ticket %>%
-  glm(Survived ~ Pclass + Age, family = "binomial", data=.)
+chisq.test(dbset_for_tests$Embarked, dbset_for_tests$Survived)
 
-dbset_no_missing_p_ticket %>%
-  glm(Survived ~ Age*Sex, family = "binomial", data=.)
+```
 
-model6 <- dbset_no_missing_p_ticket %>%
-  glm(Survived ~ Age*Sex + Pclass, family = "binomial", data=.)
+Hey, so how do i check normality of residuals, etc. for all these models? Do i only check for the base? Do violations of assumptions mean a model is discredited?? Answer: apparently with logistic regression these plots don't really work and could probably be safely ignored???
 
-summary(model6)
-plot(model6)
+BTWs I need to try some crossvalidation :(
 
-model6$linear.predictors
+```{r split_data}
 
-dbset_no_missing_p_ticket %>%
+set.seed(2024)
+
+dbset_for_ml <- dbset_p_ticket_family %>%
+  mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)"))
+
+train_index <- createDataPartition(
+  dbset_for_ml$Survived,
+  times = 1,
+  p = 0.7,
+  list = FALSE)
+
+trn <- dbset_for_ml[train_index,]
+
+# trn %>%
+#   mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)"))
+# 
+# trn %>%
+#   mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)")) %>%
+#   group_by(Title) %>%
+#   reframe(Count=n(),Mean_age=round(mean(Age, na.rm = TRUE)))
+
+trn <- trn %>%
+  mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)")) %>%
+  group_by(Title) %>%
+  mutate(Mean_age=round(mean(Age, na.rm = TRUE))) %>%
+  mutate(Age=ifelse(is.na(Age),Mean_age,Age)) %>%
+  ungroup() %>%
+  select(-c(Ticket, Title, Mean_age))
+
+#I want to make a base model using all features
+trn %>%
+  select(where(~ !is.character(.))) %>%
+  colnames(.) -> sel_cols 
+
+# sel_cols <- colnames(trn)[sapply(trn, function(x) !is.character(x))]
+
+all_cols_try <- sapply(sel_cols[-1], function(x) as.formula(paste("Survived ~", x)))
+
+all_cols_try_added <- paste(sel_cols[-1], collapse  = " + ")
+all_cols_try_added <- as.formula(paste0("Survived ~ ", all_cols_try_added))
+
+
+
+trn <- as.data.frame(trn, row.names = trn$PassengerId)[-1]
+
+
+base_models <- lapply(c(all_cols_try,all_cols_try_added), function(x) glm(x, family = "binomial", data=trn))
+
+names(base_models)[length(base_models)] <- "Added"
+
+base_aic <- as.data.frame(lapply(base_models, AIC),row.names = "AIC")
+base_bic <- as.data.frame(lapply(base_models, BIC),row.names = "BIC")
+
+summary(base_models$Added)
+
+pred_added <- predict(base_models$Added,trn[-1], type = "response")
+pred_added <- as.factor(as.numeric(pred_added>0.5))
+
+confusionMatrix(pred_added,trn$Survived, positive = "1")
+
+
+```
+
+Let's try to think before we start with the models. We know adult men were almost certainly casualties, unless they were pulled from the water. We also know children were admitted into lifeboats even if they were male, but I've read some weird things about the cutoff age for boys to be considered adult (like 8 year-olds were too old???). The other thing we know for sure is that people on first class were the only ones who had immediate access to lifeboats, while those in third class were kept below deck until it was too late because the crew underestimated the danger.
+
+That being said, once the boat sank, the people who could've survived in the water until the lifeboats came back were most likely young men. Also, some first class men were let into lifeboats because at the start they weren't getting filled.
+
+Another thing is that, as with the Allisons, it's logical to think that people who were in large family groups may have stayed on the boat trying to find each other until it was too late.
+
+Then there's the fact that cabins were not separated by class exactly, so maybe some people on third class were actually closer to the lifeboats than others in first class. But we don't have enough data on cabins. It's possible that people on cabins closer to the decks paid more, but it appears that fare per ticket wasn't exactly determined by class or type of cabin, because it worked like plane tickets.
+
+All this to say, I think testing some interactions is logical. I think the interaction between sex and age will be a better predictor of survival than either one alone, and I also think that Pclass must interact with
+
+```{r models_with_interaction}
+
+interax <- c("Pclass*Fare","Pclass*Sex","Pclass*Age","Pclass*Age*Sex","Age*Sex","Pclass*Age*Sex*Fare", "Pclass*Sex + Sex*Age + Family", "Age*Sex + Pclass", "Age*Sex + Pclass + Family", "Age*Sex + Pclass*Family", "Pclass*Sex + Sex*Age + Pclass*Age + Family", "Pclass*Sex + Sex*Age + Pclass*Age")
+
+interax <- sapply(interax, function(x) as.formula(paste("Survived ~", x)))
+
+interax_models <- lapply(interax, function(x) glm(x, family = "binomial", data=trn))
+
+
+aic_values <- sapply(interax_models, AIC)
+interax_aic <- tibble(Model = names(interax_models), AIC = aic_values)
+
+bic_values <- sapply(interax_models, BIC)
+interax_bic <- tibble(Model = names(interax_models), BIC = bic_values) %>%
+  arrange(BIC)
+
+
+interax_bic %>%
+  mutate(Delta=round(BIC - min(BIC))) %>%
+  arrange(Delta)
+
+
+summary(interax_models$`Pclass*Sex + Sex*Age + Family`)
+
+pred_sel <- predict(interax_models$`Pclass*Sex + Sex*Age + Family`,trn[-1], type = "response")
+pred_sel <- as.factor(as.numeric(pred_sel>0.5))
+
+confusionMatrix(pred_sel,trn$Survived, positive = "1")
+```
+
+```{r model_selection}
+
+
+
+
+dbset_filtered_p_ticket %>%
   ggplot(aes(Age, Survived)) +
   geom_point(alpha = 0.2) +
   geom_smooth(method = "glm", 
@@ -171,17 +309,31 @@ dbset_no_missing_p_ticket %>%
 
 ```
 
+```{r evaluate_selected_model_on_test}
+
+#DO NOT USE THE TEST SET ON MODEL SELECTION
+#that would bias the selection in favor of the test data
+
+tst <- as.data.frame(dbset_for_ml[-train_index,])
+
+tst <- tst %>%
+  mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)")) %>%
+  group_by(Title) %>%
+  mutate(Mean_age=round(mean(Age, na.rm = TRUE))) %>%
+  mutate(Age=ifelse(is.na(Age),Mean_age,Age))
+```
+
 ```{r}
 
-p1 <- dbset_no_missing %>%
+p1 <- dbset_filtered %>%
   ggplot(aes(x=Age, fill=Sex, color=Sex)) +
   geom_density(aes(y=after_stat(count)),alpha=0.6) +
   facet_wrap(~ Pclass, scales = "free")
 
-age_ranges <- pretty(dbset_no_missing$Age, n=20)
+age_ranges <- pretty(dbset_filtered$Age, n=20)
 
 
-dbset_age_split <- dbset_no_missing %>%
+dbset_age_split <- dbset_filtered %>%
   mutate(Age.Range = cut(Age, age_ranges, include.lowest = FALSE))
 
 
@@ -215,28 +367,30 @@ p1 / p2 & plot_annotation(tag_level = "A") & plot_layout(heights = c(1,2))
 # dbset_age_split$Age.Range <- as.factor(dbset_age_split$Age.Range)
 # 
 # age_pyramid(dbset_age_split, age_group = "Age.Range", split_by = "Sex", proportional = FALSE, stack_by = "Pclass")
+
+
 ```
 
 ```{r}
-dbset_no_missing %>%
+dbset_filtered %>%
   ggplot(aes(x=Age, fill=Pclass, color=Pclass)) +
   geom_density(aes(y=after_stat(count)),alpha=0.6) 
 
-table(dbset_no_missing$Pclass)/nrow(dbset_no_missing)*100
+table(dbset_filtered$Pclass)/nrow(dbset_filtered)*100
 
-dbset_no_missing %>%
+dbset_filtered %>%
   ggplot(aes(Survived, fill=Pclass, color=Pclass)) +
   geom_bar(alpha=0.6, position = "fill") 
 
-dbset_no_missing %>%
+dbset_filtered %>%
   ggplot(aes(Pclass, fill=Survived, color=Survived)) +
   geom_bar(alpha=0.6, position = "fill") 
 
-dbset_no_missing %>%
+dbset_filtered %>%
   ggplot(aes(Sex, fill=Survived, color=Survived)) +
   geom_bar(alpha=0.6, position = "fill") 
 
-dbset_no_missing_p_ticket <- dbset_no_missing %>%
+dbset_filtered_p_ticket <- dbset_filtered %>%
   group_by(Ticket) %>%
   mutate(Per_ticket=n()) %>%
   mutate(Fare=Fare/Per_ticket) %>%
