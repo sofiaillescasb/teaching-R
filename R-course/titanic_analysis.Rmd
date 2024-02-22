@@ -25,7 +25,7 @@ library(tidyverse)
 
 ```{r data_imports}
 
-dbset <- read_excel(here("dataset/titanic_dataset.xlsx"))
+dbset <- read_excel(here("dataset/Titanic Passengers.xlsx"))
 
 # Y si tuvieramos más de un hoja de Excel?
 # path <- here("dataset/titanic_dataset.xlsx")
@@ -87,12 +87,57 @@ dbset <- dbset %>%
 
 ```
 
+```{r}
+
+dbset %>%
+  select(c(Sex, Pclass, Embarked, SibSp, Parch)) %>%
+  colnames(.) -> sel_cols 
+
+forms <- sapply(sel_cols[-c(1,2)], function(x) as.formula(paste0(" ~ Survived + ", x)))
+
+
+
+lapply(forms, function(x) xtabs(x, dbset))
+```
+
+```{r train_test_split}
+
+set.seed(2024)
+
+dbset_for_ml <- dbset_p_ticket_family %>%
+  mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)"))
+
+train_index <- createDataPartition(
+  dbset_for_ml$Survived,
+  times = 1,
+  p = 0.7,
+  list = FALSE)
+
+folds <- createFolds(dbset_for_ml$Survived, k = 5)
+ctrl <- trainControl()
+
+trn <- dbset_for_ml[train_index,]
+
+
+```
+
 We'll entirely remove columns with too many missing values to give any information (over 80% missing values)
 
 ```{r missing_values}
 
+# dplyr
+missing_values <- dbset %>%
+  summarise(across(everything(), ~ mean(is.na(.x))))
+
+
+# Base R
+missing_values <- colMeans(is.na(dbset))
+
+
+keep_cols <- missing_values 
+
 dbset_filtered <- dbset %>%
-  select(where(~mean(is.na(.x)) < 0.2))
+  select(where(~mean(is.na(.x)) <= 0.21))
 
 # dbset_filtered %>%
 #   mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)"))
@@ -126,14 +171,14 @@ Showing how to calculate summary stats
 
 dbset_p_ticket_family %>%
   group_by(Pclass) %>%
-  reframe(Mean= mean(Fare),
-          Median= median(Fare)) %>%
+  reframe(Mean= mean(Fare, na.rm = TRUE),
+          Median= median(Fare, na.rm = TRUE)) %>%
   ungroup()
 
 dbset_p_ticket_family %>%
   group_by(Pclass,Survived) %>%
-  reframe(Mean= mean(Fare),
-          Median= median(Fare)) %>%
+  reframe(Mean= mean(Fare, na.rm = TRUE),
+          Median= median(Fare, na.rm = TRUE)) %>%
   ungroup()
 ```
 
@@ -186,18 +231,7 @@ BTWs I need to try some crossvalidation :(
 
 ```{r split_data}
 
-set.seed(2024)
 
-dbset_for_ml <- dbset_p_ticket_family %>%
-  mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)"))
-
-train_index <- createDataPartition(
-  dbset_for_ml$Survived,
-  times = 1,
-  p = 0.7,
-  list = FALSE)
-
-trn <- dbset_for_ml[train_index,]
 
 # trn %>%
 #   mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)"))
@@ -258,6 +292,8 @@ Another thing is that, as with the Allisons, it's logical to think that people w
 Then there's the fact that cabins were not separated by class exactly, so maybe some people on third class were actually closer to the lifeboats than others in first class. But we don't have enough data on cabins. It's possible that people on cabins closer to the decks paid more, but it appears that fare per ticket wasn't exactly determined by class or type of cabin, because it worked like plane tickets.
 
 All this to say, I think testing some interactions is logical. I think the interaction between sex and age will be a better predictor of survival than either one alone, and I also think that Pclass must interact with
+
+The logic has to be, i.e: $Survival = interval + coefficient* is male$ where a female passenger would have 0 as a coefficient and so her log(odds) of survival would equal the value of the intercept. A male passenger would have the intercept and the coefficient, and the latter would indicate his increased/decreased log(odds) of survival
 
 ```{r models_with_interaction}
 
