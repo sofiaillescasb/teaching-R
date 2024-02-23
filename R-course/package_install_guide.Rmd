@@ -15,25 +15,23 @@ knitr::opts_chunk$set(eval=FALSE)
 
 ## Paquetes que vamos a usar el lunes
 
-Todos los paquetes que vamos a usar el lunes están en CRAN, por lo que todo lo que hay que hacer es abrir RStudio y usar la función ```install.packages()```. 
+Todos los paquetes que vamos a usar el lunes están en CRAN, por lo que todo lo que hay que hacer es abrir RStudio y usar la función `install.packages()`.
 
 Queremos instalar los siguientes paquetes:
 
-- **here:** le dice a R que busque archivos en el directorio (carpeta) donde está guardado el proyecto que tienes abierto
+-   **here:** le dice a R que busque archivos en el directorio (carpeta) donde está guardado el proyecto que tienes abierto
 
-- **readxl:** para importar archivos de Excel dentro de R
+-   **readxl:** para importar archivos de Excel dentro de R
 
-- **patchwork:** permite agregar muchos gráficos distintos en la misma imagen/pdf/etc.
+-   **patchwork:** permite agregar muchos gráficos distintos en la misma imagen/pdf/etc.
 
-- **tidyverse:** en realidad son varios paquetes de R que usan los mismos tipos de datos y están diseñados para trabajar en conjunto 
-
+-   **tidyverse:** en realidad son varios paquetes de R que usan los mismos tipos de datos y están diseñados para trabajar en conjunto
 
 ```{r}
 install.packages(c("here","readxl","patchwork","tidyverse"))
 
 # Las que ya instalaron here, readxl y tidyverse solo instalen patchwork por favor
 ```
-
 
 Lo pueden escribir directamente donde dice "Console" y le dan Enter/return:
 
@@ -63,7 +61,7 @@ De no ser así, vean la sección [Resolver problemas] de este documento
 
 # ¿De dónde se instalan los paquetes?
 
-Existen varias plataformas donde se guardan los distintos paquetes de R. Todas se pueden llamar desde RStudio con diferentes funciones. 
+Existen varias plataformas donde se guardan los distintos paquetes de R. Todas se pueden llamar desde RStudio con diferentes funciones.
 
 ### Comprehensive R Archive Network (CRAN)
 
@@ -84,9 +82,9 @@ install.packages("stringi",type = "source")
 
 ### Bioconductor
 
-https://www.bioconductor.org/packages/release/BiocViews.html#___Software
+<https://www.bioconductor.org/packages/release/BiocViews.html#___Software>
 
-Tiene paquetes específicamente diseñados para bioinformática. Para utilizarlo haay que descargar el paquete ```BiocManager``` de CRAN.
+Tiene paquetes específicamente diseñados para bioinformática. Para utilizarlo haay que descargar el paquete `BiocManager` de CRAN.
 
 ```{r bioconductor}
 
@@ -97,11 +95,11 @@ BiocManager::install("limma")
 
 ### GitHub
 
-Github es una plataforma que se usa para guardar y compartir código con el público o entre un mismo equipo. Los usuarios tienen "repositorios" en los que suben sus archivos. Por ejemplo, la mía para este cursito está aquí https://github.com/sofiaillescasb/teaching-R.
+Github es una plataforma que se usa para guardar y compartir código con el público o entre un mismo equipo. Los usuarios tienen "repositorios" en los que suben sus archivos. Por ejemplo, la mía para este cursito está aquí <https://github.com/sofiaillescasb/teaching-R>.
 
 Cualquiera puede subir su código y hacerlo accesible, por lo que hay paquetes de R muy especializados, pero también hay algunas versiones experimentales de paquetes que están en CRAN o en Bioconductor.
 
-Para descargar paquetes desde GitHub hay que instalar primero el paquete ```remotes``` de CRAN y luego utilizar la función ```install_github()```. 
+Para descargar paquetes desde GitHub hay que instalar primero el paquete `remotes` de CRAN y luego utilizar la función `install_github()`.
 
 ```{r github}
 
@@ -111,12 +109,11 @@ install_github("klutometis/roxygen")
 
 ```
 
-
 ##Lista de muchos paquetes útiles
 
 Encontré esta lista en Github con paquetes buenos, pero no hace falta instalarlos, solo la pongo por si tienen curiosidad.
 
-https://github.com/qinwf/awesome-R/blob/master/README.md
+<https://github.com/qinwf/awesome-R/blob/master/README.md>
 
 # Resolver problemas
 

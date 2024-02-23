@@ -100,27 +100,6 @@ forms <- sapply(sel_cols[-c(1,2)], function(x) as.formula(paste0(" ~ Survived + 
 lapply(forms, function(x) xtabs(x, dbset))
 ```
 
-```{r train_test_split}
-
-set.seed(2024)
-
-dbset_for_ml <- dbset_p_ticket_family %>%
-  mutate(Title=str_extract(Name,"(?<=,)(.*?)(?=\\.)"))
-
-train_index <- createDataPartition(
-  dbset_for_ml$Survived,
-  times = 1,
-  p = 0.7,
-  list = FALSE)
-
-folds <- createFolds(dbset_for_ml$Survived, k = 5)
-ctrl <- trainControl()
-
-trn <- dbset_for_ml[train_index,]
-
-
-```
-
 We'll entirely remove columns with too many missing values to give any information (over 80% missing values)
 
 ```{r missing_values}
@@ -153,17 +132,100 @@ dbset_filtered <- dbset %>%
 Let's make better predictors by aggregating siblings, children, parents, and spouses into a single family unit and dividing ticket fare by the number of people on each ticket
 
 ```{r aggregate_variables}
-
 dbset_filtered_p_ticket <- dbset_filtered %>%
   group_by(Ticket) %>%
   mutate(Fare= mean(Fare)/n()) %>%
-  ungroup()
+  ungroup() %>%
+  select(-Ticket)
 
 dbset_p_ticket_family <- dbset_filtered_p_ticket %>%
   mutate(Family= SibSp + Parch) %>%
   select(-c(SibSp,Parch))
+```
+
+
+
+```{r train_test_split}
+
+set.seed(2024)
+
+dbset_for_ml <- dbset_p_ticket_family %>%
+  mutate(Title=as.factor(str_extract(Name,"(?<=,)(.*?)(?=\\.)")))
+
+
+dbset_for_ml <- dbset_for_ml %>%
+  select(-c(PassengerId, Name))
+
+train_index <- createDataPartition(
+  dbset_for_ml$Survived,
+  times = 1,
+  p = 0.8,
+  list = FALSE)
+
+trn <- dbset_for_ml[train_index,]
+
+
+trn <- trn %>%
+  group_by(Title) %>%
+  mutate(Mean_age=round(mean(Age, na.rm = TRUE))) %>%
+  mutate(Age=ifelse(is.na(Age),Mean_age,Age)) %>%
+  ungroup() %>%
+  select(-c(Mean_age, Title))
+
+# folds <- createFolds(trn$Survived, k = 3, returnTrain=TRUE)
+
+
+
+# impute_folds <- function(df) {
+#   df %>%
+#     group_by(Title) %>%
+#     mutate(Mean_age=round(mean(Age, na.rm = TRUE))) %>%
+#     mutate(Age=ifelse(is.na(Age),Mean_age,Age)) %>%
+#     ungroup() 
+# }
+
+#%>%
+    #select(-c(Mean_age,Title))
+# imputed_fold <- lapply(names(folds), function(x) impute_folds(trn[folds[[x]],]))
+
+
+# no puedooooooo haceeeer cv manualmente con la imputation que quieroooooooooo
+
+trctrl <- trainControl(method = "cv",
+                           number = 3)
+
+# for(i in seq_along(imputed_fold)) {
+#   fit1 <- train(Survived ~ ., data = as.data.frame(imputed_fold[[i]]),
+#               method = "glm",
+#               family = "binomial",
+#               preProc = c('center', 'scale', 'nzv')
+#               )
+# print(summary(fit1))
+# }
+# 
+# imputed_fold[[1]]
+
+
+
+fit1 <- train(Survived ~ Sex*Age + Pclass, data = trn,
+              method = "glm",
+              family = "binomial",
+              preProc = c('center', 'scale'),
+              na.action = na.omit
+              )
+summary(fit1)
+
+
+fit1$results
+fit1$finalModel$aic
+fit1$finalModel$R
+pred <- predict(fit1, trn[-2])
+confusionMatrix(pred,trn$Survived, positive = "1")
+
+
 
 ```
+
 
 Showing how to calculate summary stats
 
