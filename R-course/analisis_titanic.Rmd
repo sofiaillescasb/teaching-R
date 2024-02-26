@@ -26,7 +26,7 @@ library(tidyverse)
 
 ```{r data_imports}
 
-dbset <- read_excel(here("dataset/Titanic Passengers.xlsx"))
+dbset <- read_excel(here("dataset/titanic_dataset.xlsx"))
 
 # Y si tuvieramos más de un hoja de Excel?
 # path <- here("dataset/titanic_dataset.xlsx")
@@ -51,7 +51,6 @@ dbset %>%
   select(PassengerId:Pclass)
 
 
-
 dbset %>%
   mutate(Pclass=as.factor(paste0("Class_",Pclass)))
 
@@ -67,19 +66,8 @@ dbset %>%
   summarise(Mean= mean(Fare)) %>%
   ungroup()
 
-?summarise
-# summ_stat <- function(df) {
-#   df %>%
-#     group_by(Sex) %>%
-#     select(where(is.numeric)) %>%
-#     summarise(across(everything(),
-#                      Mean= ~ mean(.x),
-#                      Median= ~ median(.x)))
-# }
-# 
-# summ_stat(dbset)
-
 ```
+
 
 ```{r dplyr_row}
 dbset %>%
@@ -96,6 +84,7 @@ dbset %>%
 
 ```
 
+
 ```{r dplyr_group}
 dbset %>%
   group_by(Sex) %>%
@@ -110,3 +99,10 @@ dbset %>%
   count(name = "Count")
 
 ```
+
+
+```{r}
+
+```
+
+

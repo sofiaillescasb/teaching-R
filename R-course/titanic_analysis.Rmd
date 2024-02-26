@@ -25,7 +25,7 @@ library(tidyverse)
 
 ```{r data_imports}
 
-dbset <- read_excel(here("dataset/Titanic Passengers.xlsx"))
+dbset <- read_excel(here("dataset/titanic_dataset.xlsx"))
 
 # Y si tuvieramos más de un hoja de Excel?
 # path <- here("dataset/titanic_dataset.xlsx")
@@ -62,19 +62,6 @@ dbset %>%
     dplyr::group_by(Pclass,Sex) %>%
     reframe(Mean= mean(Fare),
             Median= median(Fare))
-
-
-# summ_stat <- function(df) {
-#   df %>%
-#     group_by(Sex) %>%
-#     select(where(is.numeric)) %>%
-#     summarise(across(everything(),
-#                      Mean= ~ mean(.x),
-#                      Median= ~ median(.x),
-#                      CI= ~ confint(.x)))#incorrect function
-# }
-# 
-# summ_stat(dbset)
 
 ```
 
