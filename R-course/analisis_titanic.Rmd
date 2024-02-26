@@ -1,0 +1,112 @@
+---
+title: "Titanic"
+author: "Sofia Illescas"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# 1. Importing libraries
+
+Cuando estas haciendo un reporte para tu analisis de datos, se puede poner include=FALSE para que no salga anda en el documento. Me estoy dando cuenta de que si estamos usando esto como cuaderno de notas podriamos usar echo=TRUE con warning=FALSE y message=FALSE
+
+```{r libraries, echo=TRUE, warning=FALSE, message=FALSE}
+library(here)
+library(readxl)
+library(patchwork)
+library(caret)
+library(tidyverse)
+```
+
+# 2. Importing data
+
+```{r data_imports}
+
+dbset <- read_excel(here("dataset/Titanic Passengers.xlsx"))
+
+# Y si tuvieramos más de un hoja de Excel?
+# path <- here("dataset/titanic_dataset.xlsx")
+# dbset_list <- lapply(excel_sheets(path), read_excel, path = path)
+
+# Vamos a revisar los datos
+# Las columnas deben ser las variables dependientes y las filas deben ser observaciones
+```
+
+
+# 3. Cleaning data
+
+Funciones de tidyverse (el paquete concreto es **dplyr**)
+
+
+
+```{r dplyr_column}
+
+# select se usa para seleccionar columnas por nombre
+# : se usa para seleccionar un rango de columnas, 
+dbset %>%
+  select(PassengerId:Pclass)
+
+
+
+dbset %>%
+  mutate(Pclass=as.factor(paste0("Class_",Pclass)))
+
+# reframe() y summarise()
+
+dbset %>%
+    dplyr::group_by(Pclass,Sex) %>%
+    reframe(Mean= mean(Fare),
+            Median= median(Fare))
+
+dbset %>%
+  dplyr::group_by(Pclass,Sex) %>%
+  summarise(Mean= mean(Fare)) %>%
+  ungroup()
+
+?summarise
+# summ_stat <- function(df) {
+#   df %>%
+#     group_by(Sex) %>%
+#     select(where(is.numeric)) %>%
+#     summarise(across(everything(),
+#                      Mean= ~ mean(.x),
+#                      Median= ~ median(.x)))
+# }
+# 
+# summ_stat(dbset)
+
+```
+
+```{r dplyr_row}
+dbset %>%
+  filter(Sex=="female")
+
+dbset %>%
+  distinct(Pclass)
+
+dbset %>%
+  arrange(Fare)
+
+dbset %>%
+  arrange(desc(Fare))
+
+```
+
+```{r dplyr_group}
+dbset %>%
+  group_by(Sex) %>%
+  mutate(Mean_age = mean(Age, na.rm = TRUE))
+
+dbset %>%
+  group_by(Sex) %>%
+  summarise(Mean_age = mean(Age, na.rm = TRUE))
+
+dbset %>%
+  group_by(Sex) %>%
+  count(name = "Count")
+
+```

@@ -143,8 +143,6 @@ dbset_p_ticket_family <- dbset_filtered_p_ticket %>%
   select(-c(SibSp,Parch))
 ```
 
-
-
 ```{r train_test_split}
 
 set.seed(2024)
@@ -225,7 +223,6 @@ confusionMatrix(pred,trn$Survived, positive = "1")
 
 
 ```
-
 
 Showing how to calculate summary stats
 
